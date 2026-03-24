@@ -1,76 +1,113 @@
 import React, { useState } from 'react';
-import { Send, Sparkles, Loader2 } from 'lucide-react';
+import { PenTool, Loader2, Send } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
-const Ghostwriter = () => {
-  const [target, setTarget] = useState('');
-  const [offer, setOffer] = useState('');
-  const [painPoint, setPainPoint] = useState('');
-  const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
+export function Ghostwriter() {
+  const [productName, setProductName] = useState("");
+  const [painPoints, setPainPoints] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [result, setResult] = useState("");
 
-  const generateContent = async () => {
-    setLoading(true);
+  const handleGenerate = async () => {
+    if (!productName || !painPoints) return;
+    
+    setIsGenerating(true);
     try {
+      // نرسل الطلب إلى العقل السحابي الذي أنشأناه في مجلد api
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `اكتب سكريبت إعلاني احترافي لإنستقرام ريلز. 
-          الجمهور المستهدف: ${target}. 
-          العرض المقدم: ${offer}. 
-          نقطة الألم التي نركز عليها: ${painPoint}. 
-          اجعل الأسلوب قديراً (Heiba) ومقنعاً جداً بنظام Shadow OS.`
+          content: `Act as a High-Ticket Direct Response Copywriter (Iman Gadzhi Style).
+          Analyze this Product: ${productName}
+          Focus on these Pain Points: ${painPoints}
+          
+          Deliver:
+          1. 14-Day Aggressive Launch Plan.
+          2. 3 High-Converting IG Reels Scripts (Hook, Body, CTA).
+          3. 2 Cold DM Scripts for Outreach.
+          
+          Tone: Authoritative, Minimalist, Elite. Language: English.`
         }),
       });
+
       const data = await response.json();
-      setResult(data.result);
+      setResult(data.result || "Failed to generate assets.");
     } catch (error) {
-      setResult("خطأ في الاتصال بالمحرك السحابي. تأكد من إعداد API Key.");
+      console.error("Generation failed", error);
+      setResult("Error: Cloud Engine is still waking up. Please try again in 10 seconds.");
+    } finally {
+      setIsGenerating(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center space-x-2 text-green-400 mb-4">
-        <Sparkles size={24} />
-        <h2 className="text-2xl font-bold tracking-wider">GHOSTWRITER AI</h2>
-      </div>
+    <div className="p-8 space-y-8 h-full flex flex-col">
+      <header>
+        <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <PenTool className="text-green-500" />
+          Ghostwriter AI
+        </h2>
+        <p className="text-zinc-500 mt-2">Deploy aggressive direct-response assets for the Global Market.</p>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input 
-          placeholder="الجمهور (مثلاً: موظفين مشغولين)" 
-          className="bg-black border border-green-900/30 p-3 rounded text-white focus:border-green-500 outline-none"
-          value={target} onChange={(e) => setTarget(e.target.value)}
-        />
-        <input 
-          placeholder="العرض (مثلاً: تدريب 1-on-1)" 
-          className="bg-black border border-green-900/30 p-3 rounded text-white focus:border-green-500 outline-none"
-          value={offer} onChange={(e) => setOffer(e.target.value)}
-        />
-        <input 
-          placeholder="نقطة الألم (مثلاً: ضيق الوقت)" 
-          className="bg-black border border-green-900/30 p-3 rounded text-white focus:border-green-500 outline-none"
-          value={painPoint} onChange={(e) => setPainPoint(e.target.value)}
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+        <div className="space-y-6">
+          <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Product Name</label>
+              <input
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="e.g. 6-Figure Fitness Systems"
+                className="w-full bg-black border border-zinc-800 rounded-lg p-3 text-white focus:border-green-500 outline-none"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Core Pain Points</label>
+              <textarea
+                value={painPoints}
+                onChange={(e) => setPainPoints(e.target.value)}
+                placeholder="e.g. Coaches trading time for money, lack of high-ticket clients..."
+                className="w-full h-48 bg-black border border-zinc-800 rounded-lg p-3 text-white focus:border-green-500 outline-none resize-none"
+              />
+            </div>
 
-      <button 
-        onClick={generateContent}
-        disabled={loading}
-        className="w-full bg-green-600 hover:bg-green-500 text-black font-bold py-3 rounded flex items-center justify-center transition-all disabled:opacity-50"
-      >
-        {loading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" />}
-        توليد المحتوى الإعلاني
-      </button>
-
-      {result && (
-        <div className="mt-6 p-4 bg-zinc-900 border-l-4 border-green-500 rounded text-right whitespace-pre-wrap leading-relaxed">
-          {result}
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating || !productName || !painPoints}
+              className="w-full bg-green-600 hover:bg-green-500 text-black font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  ANALYZING MARKET...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  DEPLOY ASSETS
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      )}
+
+        <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl overflow-y-auto max-h-[calc(100vh-250px)]">
+          {result ? (
+            <div className="prose prose-invert prose-green max-w-none text-left">
+              <ReactMarkdown>{result}</ReactMarkdown>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50 text-center">
+              <PenTool size={48} className="mb-4" />
+              <p>Waiting for Input Data...</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Ghostwriter;
+}
