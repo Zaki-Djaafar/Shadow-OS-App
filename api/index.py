@@ -6,45 +6,39 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# إعداد المفتاح
+# إعداد المفتاح من بيئة Vercel
 api_key = os.environ.get("GEMINI_API_KEY")
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     try:
         if not api_key:
-            return jsonify({"result": "Error: API Key missing in Vercel settings."}), 500
+            return jsonify({"result": "Error: API Key missing."}), 500
 
         genai.configure(api_key=api_key)
         
-        # قمنا بتغيير الموديل إلى النسخة الأكثر استقراراً وقبولاً عالمياً في 2026
-        model = genai.GenerativeModel('gemini-1.5-flash') 
+        # استخدام إعدادات افتراضية بسيطة لضمان التوافق
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         data = request.json
         prompt = data.get('content', '')
 
-        # إضافة إعدادات السلامة لضمان عدم حظر المحتوى التسويقي "الهجومي"
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                top_p=0.9,
-            )
-        )
+        # توليد المحتوى مباشرة بدون تعقيد الإعدادات في البداية
+        response = model.generate_content(prompt)
         
         if response and response.text:
             return jsonify({"result": response.text})
         else:
-            return jsonify({"result": "Engine returned empty. Try again."})
+            return jsonify({"result": "Engine returned empty."})
 
     except Exception as e:
-        # إذا فشل الموديل الأول، يحاول تلقائياً مع الموديل البديل
+        # إذا حدث خطأ، نحاول استخدام الموديل المستقر 1.0 كملاذ أخير
         try:
-            model_alt = genai.GenerativeModel('gemini-1.5-flash')
+            model_alt = genai.GenerativeModel('gemini-1.0-pro')
             response = model_alt.generate_content(data.get('content', ''))
             return jsonify({"result": response.text})
-        except:
-            return jsonify({"result": f"Internal Error: {str(e)}"}), 500
+        except Exception as second_e:
+            return jsonify({"result": f"Technical Error: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run()
