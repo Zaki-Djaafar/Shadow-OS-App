@@ -18,7 +18,7 @@ def analyze():
         genai.configure(api_key=api_key)
         
         # قمنا بتغيير الموديل إلى النسخة الأكثر استقراراً وقبولاً عالمياً في 2026
-        model = genai.GenerativeModel('gemini-1.5-pro') 
+        model = genai.GenerativeModel('gemini-1.5-flash') 
         
         data = request.json
         prompt = data.get('content', '')
