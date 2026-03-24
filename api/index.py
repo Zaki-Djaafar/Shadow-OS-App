@@ -37,8 +37,4 @@ def analyze():
             model_alt = genai.GenerativeModel('gemini-1.0-pro')
             response = model_alt.generate_content(data.get('content', ''))
             return jsonify({"result": response.text})
-        except Exception as second_e:
-            return jsonify({"result": f"Technical Error: {str(e)}"}), 500
-
-if __name__ == "__main__":
-    app.run()
+     Technical Error: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
