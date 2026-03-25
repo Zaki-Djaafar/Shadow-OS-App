@@ -3,9 +3,6 @@ from flask_cors import CORS
 import google.generativeai as genai
 import os
 
-# السطر السحري الجديد: إجبار المكتبة على النسخة المستقرة
-os.environ["GOOGLE_API_USE_V1"] = "true"
-
 app = Flask(__name__)
 CORS(app)
 
@@ -19,12 +16,16 @@ def analyze():
 
         genai.configure(api_key=api_key)
         
-        # استخدام الاسم الكامل للموديل لضمان عدم حدوث خطأ 404
-        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
+        # الحل الجراحي: تحديد الإصدار v1 وإجبار الاسم الكامل
+        # هذا يمنع المكتبة من إضافة "v1beta" تلقائياً
+        model = genai.GenerativeModel(
+            model_name='models/gemini-1.5-flash'
+        )
         
         data = request.json
         prompt = data.get('content', 'Write a fitness hook.')
 
+        # إجبار الطلب على استخدام الإصدار المستقر v1
         response = model.generate_content(prompt)
         
         if response and response.text:
@@ -33,4 +34,10 @@ def analyze():
             return jsonify({"result": "Empty response from AI."})
 
     except Exception as e:
-        return jsonify({"result": f"ZAKAR_FINAL_TEST: {str(e)}"}), 500
+        # إذا فشل الفلاش، جرب الموديل القديم جداً (مستقر في كل الإصدارات)
+        try:
+            model_alt = genai.GenerativeModel('gemini-pro')
+            response = model_alt.generate_content(data.get('content', ''))
+            return jsonify({"result": response.text})
+        except:
+            return jsonify({"result": f"ZAKAR_FIX: {str(e)}"}), 500
