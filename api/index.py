@@ -3,10 +3,12 @@ from flask_cors import CORS
 import google.generativeai as genai
 import os
 
+# السطر السحري الجديد: إجبار المكتبة على النسخة المستقرة
+os.environ["GOOGLE_API_USE_V1"] = "true"
+
 app = Flask(__name__)
 CORS(app)
 
-# إعداد المفتاح
 api_key = os.environ.get("GEMINI_API_KEY")
 
 @app.route('/api/analyze', methods=['POST'])
@@ -15,24 +17,20 @@ def analyze():
         if not api_key:
             return jsonify({"result": "Error: API Key missing."}), 500
 
-        # تهيئة سريعة
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # استخدام الاسم الكامل للموديل لضمان عدم حدوث خطأ 404
+        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
         
         data = request.json
-        prompt = data.get('content', 'Write a short fitness marketing hook.')
+        prompt = data.get('content', 'Write a fitness hook.')
 
-        # محاولة التوليد مع تقليل التعقيد لسرعة الاستجابة
         response = model.generate_content(prompt)
         
         if response and response.text:
             return jsonify({"result": response.text})
         else:
-            return jsonify({"result": "Engine is ready but returned empty. Try again."})
+            return jsonify({"result": "Empty response from AI."})
 
     except Exception as e:
-        # رسالة تنبيه واضحة للتأكد من أن الكود يعمل
-        return jsonify({"result": f"ZAKAR_SYSTEM: {str(e)}"}), 500
-
-# هذا السطر مهم جداً لـ Vercel
-app.debug = False
+        return jsonify({"result": f"ZAKAR_FINAL_TEST: {str(e)}"}), 500
