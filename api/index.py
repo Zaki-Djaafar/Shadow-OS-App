@@ -12,32 +12,20 @@ api_key = os.environ.get("GEMINI_API_KEY")
 def analyze():
     try:
         if not api_key:
-            return jsonify({"result": "Error: API Key missing."}), 500
+            return jsonify({"result": "DEBUG: API Key is missing in Vercel settings."}), 500
 
         genai.configure(api_key=api_key)
         
-        # الحل الجراحي: تحديد الإصدار v1 وإجبار الاسم الكامل
-        # هذا يمنع المكتبة من إضافة "v1beta" تلقائياً
-        model = genai.GenerativeModel(
-            model_name='models/gemini-1.5-flash'
-        )
-        
-        data = request.json
-        prompt = data.get('content', 'Write a fitness hook.')
-
-        # إجبار الطلب على استخدام الإصدار المستقر v1
-        response = model.generate_content(prompt)
-        
-        if response and response.text:
+        # محاولة أولى: الموديل السريع
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(request.json.get('content', 'Hello'))
             return jsonify({"result": response.text})
-        else:
-            return jsonify({"result": "Empty response from AI."})
+        except Exception as e1:
+            # محاولة ثانية: الموديل الأكثر استقراراً كبديل
+            model_alt = genai.GenerativeModel('gemini-pro')
+            response_alt = model_alt.generate_content(request.json.get('content', 'Hello'))
+            return jsonify({"result": response_alt.text})
 
     except Exception as e:
-        # إذا فشل الفلاش، جرب الموديل القديم جداً (مستقر في كل الإصدارات)
-        try:
-            model_alt = genai.GenerativeModel('gemini-pro')
-            response = model_alt.generate_content(data.get('content', ''))
-            return jsonify({"result": response.text})
-        except:
-            return jsonify({"result": f"ZAKAR_FIX: {str(e)}"}), 500
+        return jsonify({"result": f"ZAKAR_DIAGNOSTIC: {str(e)}"}), 500
