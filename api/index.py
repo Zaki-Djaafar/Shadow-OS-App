@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# إعداد المفتاح من بيئة Vercel
+# إعداد المفتاح
 api_key = os.environ.get("GEMINI_API_KEY")
 
 @app.route('/api/analyze', methods=['POST'])
@@ -15,26 +15,24 @@ def analyze():
         if not api_key:
             return jsonify({"result": "Error: API Key missing."}), 500
 
+        # تهيئة سريعة
         genai.configure(api_key=api_key)
-        
-        # استخدام إعدادات افتراضية بسيطة لضمان التوافق
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         data = request.json
-        prompt = data.get('content', '')
+        prompt = data.get('content', 'Write a short fitness marketing hook.')
 
-        # توليد المحتوى مباشرة بدون تعقيد الإعدادات في البداية
+        # محاولة التوليد مع تقليل التعقيد لسرعة الاستجابة
         response = model.generate_content(prompt)
         
         if response and response.text:
             return jsonify({"result": response.text})
         else:
-            return jsonify({"result": "Engine returned empty."})
+            return jsonify({"result": "Engine is ready but returned empty. Try again."})
 
     except Exception as e:
-        # إذا حدث خطأ، نحاول استخدام الموديل المستقر 1.0 كملاذ أخير
-        try:
-            model_alt = genai.GenerativeModel('gemini-1.0-pro')
-            response = model_alt.generate_content(data.get('content', ''))
-            return jsonify({"result": response.text})
-     Technical Error: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+        # رسالة تنبيه واضحة للتأكد من أن الكود يعمل
+        return jsonify({"result": f"ZAKAR_SYSTEM: {str(e)}"}), 500
+
+# هذا السطر مهم جداً لـ Vercel
+app.debug = False
