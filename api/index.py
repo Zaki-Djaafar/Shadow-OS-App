@@ -8,32 +8,30 @@ CORS(app)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    # جلب المفتاح داخل الدالة لضمان قراءة القيمة الجديدة من Vercel
     api_key = os.environ.get("GEMINI_API_KEY")
-    
     try:
-        if not api_key or len(api_key) < 10:
-            return jsonify({"result": "DEBUG_ERR: API Key is missing or too short!"}), 500
-
+        # إعداد الإعدادات قبل أي شيء آخر
         genai.configure(api_key=api_key)
         
-        # محاولة الاتصال المباشر بأبسط صورة
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # إجبار الموديل على استخدام المسار الكامل والمستقر
+        # لاحظ إضافة "models/" وتجنب أي ذكر لـ beta
+        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
         
         data = request.json
-        prompt = data.get('content', 'Write a short fitness hook.')
-        
+        prompt = data.get('content', 'Hello')
+
+        # محاولة الطلب
         response = model.generate_content(prompt)
         
-        if response and response.text:
+        if response.text:
             return jsonify({"result": response.text})
-        else:
-            return jsonify({"result": "Empty response from Google. Check API billing/limits."})
+        return jsonify({"result": "Success but empty text."})
 
     except Exception as e:
-        # عرض أول 5 أحرف من المفتاح للتأكد أنه يُقرأ فعلاً من Vercel
-        key_preview = api_key[:5] if api_key else "NONE"
-        return jsonify({"result": f"ZAKAR_FINAL_CHECK | Key starts with: {key_preview} | Error: {str(e)}"}), 500
-
-if __name__ == "__main__":
-    app.run()
+        # إذا فشل، سنحاول "الموديل القديم" الذي يعمل في كل مكان
+        try:
+            model_alt = genai.GenerativeModel(model_name='models/gemini-pro')
+            res = model_alt.generate_content(data.get('content', 'Hello'))
+            return jsonify({"result": res.text})
+        except Exception as e2:
+            return jsonify({"result": f"ZAKAR_ULTIMATE_ERROR: {str(e)}"}), 500
