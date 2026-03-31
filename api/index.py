@@ -11,11 +11,22 @@ def analyze():
     api_key = os.environ.get("GEMINI_API_KEY")
     user_input = request.json.get('content', '')
     
-    # قمنا بتغيير flash إلى gemini-pro لأنه الأكثر استقراراً وقبولاً في v1
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={api_key}"
+    # قمنا بتغيير الاسم إلى gemini-1.0-pro وتغيير الرابط قليلاً
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={api_key}"
     
     payload = {
-        "contents": [{"parts": [{"text": user_input}]}]
+        "contents": [
+            {
+                "parts": [{"text": user_input}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.9,
+            "topK": 1,
+            "topP": 1,
+            "maxOutputTokens": 2048,
+            "stopSequences": []
+        }
     }
 
     try:
@@ -23,16 +34,16 @@ def analyze():
         res_data = response.json()
 
         if response.status_code == 200:
-            # موديل gemini-pro أحياناً يرجع النتيجة بهيكل مختلف قليلاً، هذا الكود يضمن استخراجها
             try:
+                # استخراج النص من الهيكل الخاص بـ gemini-1.0-pro
                 answer = res_data['candidates'][0]['content']['parts'][0]['text']
                 return jsonify({"result": answer})
-            except:
-                return jsonify({"result": "Success, but response structure is different."})
+            except Exception as inner_e:
+                return jsonify({"result": f"Data Parsing Error: {str(res_data)}"}), 500
         else:
+            # هنا سنعرف الحقيقة المطلقة من جوجل
             error_msg = res_data.get('error', {}).get('message', 'Unknown Error')
-            # إذا استمر الخطأ، سنعرف السبب هنا
-            return jsonify({"result": f"Google Cloud Status: {error_msg}"}), response.status_code
+            return jsonify({"result": f"Google Final Status: {error_msg}"}), response.status_code
 
     except Exception as e:
         return jsonify({"result": f"System Error: {str(e)}"}), 500
