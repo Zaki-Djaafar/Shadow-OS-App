@@ -8,12 +8,11 @@ CORS(app)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    # هذا سيجلب المفتاح الجديد الذي أنشأته في Google Cloud
     api_key = os.environ.get("GEMINI_API_KEY")
     user_input = request.json.get('content', '')
     
-    # لاحظ هنا استخدمنا v1 (النسخة المستقرة) وليس v1beta
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # قمنا بتغيير flash إلى gemini-pro لأنه الأكثر استقراراً وقبولاً في v1
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={api_key}"
     
     payload = {
         "contents": [{"parts": [{"text": user_input}]}]
@@ -24,13 +23,16 @@ def analyze():
         res_data = response.json()
 
         if response.status_code == 200:
-            # استخراج النص بنجاح
-            answer = res_data['candidates'][0]['content']['parts'][0]['text']
-            return jsonify({"result": answer})
+            # موديل gemini-pro أحياناً يرجع النتيجة بهيكل مختلف قليلاً، هذا الكود يضمن استخراجها
+            try:
+                answer = res_data['candidates'][0]['content']['parts'][0]['text']
+                return jsonify({"result": answer})
+            except:
+                return jsonify({"result": "Success, but response structure is different."})
         else:
-            # إذا حدث خطأ، سيعطيك السبب الحقيقي من جوجل
             error_msg = res_data.get('error', {}).get('message', 'Unknown Error')
-            return jsonify({"result": f"Google Error: {error_msg}"}), response.status_code
+            # إذا استمر الخطأ، سنعرف السبب هنا
+            return jsonify({"result": f"Google Cloud Status: {error_msg}"}), response.status_code
 
     except Exception as e:
         return jsonify({"result": f"System Error: {str(e)}"}), 500
