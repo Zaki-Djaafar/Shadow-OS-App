@@ -1,10 +1,35 @@
 import { useAppContext } from "@/context/AppContext";
 import { motion } from "motion/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Calculator, ArrowRight } from "lucide-react";
+import { Calculator, ArrowRight, Instagram, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 export function ROIAnalyst() {
-  const { followers, setFollowers, engagementRate, setEngagementRate, productPrice, setProductPrice, revenueGap } = useAppContext();
+  const { followers, setFollowers, engagementRate, setEngagementRate, productPrice, setProductPrice, revenueGap, instagramUrl, setInstagramUrl, setNiche } = useAppContext();
+  const [isScraping, setIsScraping] = useState(false);
+
+  const handleScrape = async () => {
+    if (!instagramUrl) return;
+    setIsScraping(true);
+    try {
+      const response = await fetch('/api/fetch-ig-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: instagramUrl })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFollowers(data.followers);
+        if (data.bio) setNiche(data.bio);
+      } else {
+        alert(data.error || "Failed to fetch profile");
+      }
+    } catch (e) {
+      alert("System error scraping profile");
+    } finally {
+      setIsScraping(false);
+    }
+  };
 
   // revenueGap is now calculated globally in AppContext
 
@@ -26,6 +51,28 @@ export function ROIAnalyst() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
         {/* Input Panel */}
         <div className="bg-shadow-card border border-shadow-border p-6 rounded-xl space-y-6">
+          <div className="bg-shadow-bg p-4 rounded-xl border border-shadow-border space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-shadow-muted mb-2">Automated Data Sync</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  placeholder="IG Username/URL"
+                  className="flex-1 bg-transparent border border-shadow-border rounded-lg p-3 text-white focus:ring-1 focus:ring-shadow-accent outline-none font-mono text-sm"
+                />
+                <button 
+                  onClick={handleScrape}
+                  disabled={isScraping || !instagramUrl}
+                  className="bg-shadow-accent hover:bg-green-600 text-black px-4 rounded-lg font-bold flex items-center justify-center disabled:opacity-50 transition-colors"
+                >
+                  {isScraping ? <Loader2 size={18} className="animate-spin" /> : <Instagram size={18} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-shadow-muted mb-2">Follower Count</label>
             <input

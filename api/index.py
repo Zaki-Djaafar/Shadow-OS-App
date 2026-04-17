@@ -1,5 +1,6 @@
 import os
 import requests
+import instaloader
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -74,3 +75,31 @@ def manychat():
     """
     result, status = call_gemini(prompt)
     return jsonify({"result": result}), status if status != 200 else 200
+
+@app.route('/api/fetch-ig-profile', methods=['POST'])
+def fetch_ig_profile():
+    url_or_username = request.json.get('url', '').strip()
+    if not url_or_username:
+        return jsonify({"success": False, "error": "No username or URL provided."}), 400
+        
+    username = url_or_username
+    # Clean URL to get just username
+    if "instagram.com" in username:
+        parts = username.split("instagram.com/")
+        if len(parts) > 1:
+            username = parts[1].split("/")[0].split("?")[0]
+            
+    try:
+        L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="")
+        profile = instaloader.Profile.from_username(L.context, username)
+        
+        return jsonify({
+            "success": True,
+            "followers": profile.followers,
+            "bio": profile.biography
+        }), 200
+    except instaloader.exceptions.ProfileNotExistsException:
+        return jsonify({"success": False, "error": "Profile not found."}), 404
+    except Exception as e:
+        # Reaching here commonly means Facebook caught the scraper (rate limited / login required)
+        return jsonify({"success": False, "error": f"Scraper blocked or failed: {str(e)}"}), 500
