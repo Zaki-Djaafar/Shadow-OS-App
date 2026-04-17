@@ -1,6 +1,5 @@
 import os
 import requests
-import instaloader
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -83,23 +82,53 @@ def fetch_ig_profile():
         return jsonify({"success": False, "error": "No username or URL provided."}), 400
         
     username = url_or_username
-    # Clean URL to get just username
     if "instagram.com" in username:
         parts = username.split("instagram.com/")
         if len(parts) > 1:
             username = parts[1].split("/")[0].split("?")[0]
             
     try:
-        L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="")
-        profile = instaloader.Profile.from_username(L.context, username)
+        rapidapi_key = os.environ.get("RAPIDAPI_KEY")
+        if not rapidapi_key:
+            return jsonify({"success": False, "error": "RAPIDAPI_KEY environment variable is not configured on Vercel."}), 500
+            
+        url = "https://instagram-scraper-stable-api.p.rapidapi.com/v1/users/info"
+        querystring = {"username": username}
+        headers = {
+            "X-RapidAPI-Key": rapidapi_key,
+            "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com"
+        }
         
+        response = requests.get(url, headers=headers, params=querystring)
+        
+        if response.status_code == 404:
+            # Fallback path if the primary endpoint structure differs
+            url = "https://instagram-scraper-stable-api.p.rapidapi.com/api/v1/info"
+            response = requests.get(url, headers=headers, params=querystring)
+            
+        if response.status_code != 200:
+             return jsonify({"success": False, "error": f"RapidAPI Endpoint Rejected: {response.text}"}), response.status_code
+             
+        data = response.json()
+        
+        # Robust polymorphic JSON parsing across common IG Graph schemas
+        user_data = data.get('data', {}).get('user', {}) or data.get('user', {}) or data
+        
+        bio = user_data.get('biography', '') or user_data.get('about', '')
+        followers = 0
+        
+        if 'edge_followed_by' in user_data:
+            followers = user_data['edge_followed_by'].get('count', 0)
+        elif 'follower_count' in user_data:
+            followers = user_data['follower_count']
+        elif 'followers' in user_data:
+            followers = user_data['followers']
+            
         return jsonify({
             "success": True,
-            "followers": profile.followers,
-            "bio": profile.biography
+            "followers": followers,
+            "bio": bio
         }), 200
-    except instaloader.exceptions.ProfileNotExistsException:
-        return jsonify({"success": False, "error": "Profile not found."}), 404
+        
     except Exception as e:
-        # Reaching here commonly means Facebook caught the scraper (rate limited / login required)
-        return jsonify({"success": False, "error": f"Scraper blocked or failed: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"API Scraper logic failed: {str(e)}"}), 500
