@@ -8,7 +8,7 @@ CORS(app)
 
 def call_gemini(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
@@ -17,6 +17,8 @@ def call_gemini(prompt):
         res_data = response.json()
         if response.status_code == 200:
             return res_data['candidates'][0]['content']['parts'][0]['text'], 200
+        elif response.status_code == 429 or response.status_code == 503 or "quota" in str(res_data).lower() or "overloaded" in str(res_data).lower():
+            return "SYSTEM OVERLOAD: AI Core is experiencing high demand. Please wait 10 seconds and retry.", 429
         else:
             error_msg = res_data.get('error', {}).get('message', 'Unknown Error')
             return f"Google Error: {error_msg}", response.status_code

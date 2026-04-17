@@ -41,7 +41,7 @@ const HackerLoader = () => {
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "automation">("overview");
-  const { synthesizedProduct } = useAppContext();
+  const { synthesizedProduct, instagramUrl, setInstagramUrl } = useAppContext();
   const [manyChatPlan, setManyChatPlan] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -96,6 +96,23 @@ export function Dashboard() {
 
       {activeTab === "overview" && (
         <div className="space-y-8">
+          {/* Instagram Data Link */}
+          <div className="bg-shadow-card border border-shadow-border p-6 rounded-xl flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-medium text-shadow-muted mb-2">Primary Instagram Link</label>
+              <div className="flex bg-shadow-bg border border-shadow-border py-1 px-2 rounded-lg items-center">
+                 <span className="text-shadow-muted px-2">ig://</span>
+                 <input
+                   type="text"
+                   value={instagramUrl}
+                   onChange={(e) => setInstagramUrl(e.target.value)}
+                   placeholder="e.g. https://instagram.com/shadow_os"
+                   className="w-full bg-transparent text-white focus:outline-none p-2 font-mono text-sm"
+                 />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
               <motion.div

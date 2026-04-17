@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface AppState {
+  instagramUrl: string;
+  setInstagramUrl: (val: string) => void;
+
   followers: number;
   setFollowers: (val: number) => void;
   engagementRate: number;
@@ -23,20 +26,48 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
+// Helper to load state from localStorage safely
+function getInitialState<T>(key: string, defaultValue: T): T {
+  if (typeof window === 'undefined') return defaultValue;
+  const stored = localStorage.getItem(key);
+  if (stored !== null) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [followers, setFollowers] = useState(10000);
-  const [engagementRate, setEngagementRate] = useState(3.5);
-  const [productPrice, setProductPrice] = useState(49);
+  const [instagramUrl, setInstagramUrl] = useState<string>(() => getInitialState('shadowOs_instagramUrl', ''));
+  const [followers, setFollowers] = useState<number>(() => getInitialState('shadowOs_followers', 10000));
+  const [engagementRate, setEngagementRate] = useState<number>(() => getInitialState('shadowOs_engagementRate', 3.5));
+  const [productPrice, setProductPrice] = useState<number>(() => getInitialState('shadowOs_productPrice', 49));
   
-  const [productName, setProductName] = useState("");
-  const [painPoints, setPainPoints] = useState("");
-  const [niche, setNiche] = useState("");
-  const [synthesizedProduct, setSynthesizedProduct] = useState("");
+  const [productName, setProductName] = useState<string>(() => getInitialState('shadowOs_productName', ''));
+  const [painPoints, setPainPoints] = useState<string>(() => getInitialState('shadowOs_painPoints', ''));
+  const [niche, setNiche] = useState<string>(() => getInitialState('shadowOs_niche', ''));
+  const [synthesizedProduct, setSynthesizedProduct] = useState<string>(() => getInitialState('shadowOs_synthesizedProduct', ''));
+
+  // Sync state to local storage whenever critical state changes
+  useEffect(() => {
+    localStorage.setItem('shadowOs_instagramUrl', JSON.stringify(instagramUrl));
+    localStorage.setItem('shadowOs_followers', JSON.stringify(followers));
+    localStorage.setItem('shadowOs_engagementRate', JSON.stringify(engagementRate));
+    localStorage.setItem('shadowOs_productPrice', JSON.stringify(productPrice));
+    localStorage.setItem('shadowOs_productName', JSON.stringify(productName));
+    localStorage.setItem('shadowOs_painPoints', JSON.stringify(painPoints));
+    localStorage.setItem('shadowOs_niche', JSON.stringify(niche));
+    localStorage.setItem('shadowOs_synthesizedProduct', JSON.stringify(synthesizedProduct));
+  }, [instagramUrl, followers, engagementRate, productPrice, productName, painPoints, niche, synthesizedProduct]);
 
   const revenueGap = Math.round(followers * (engagementRate / 100) * productPrice);
 
   return (
     <AppContext.Provider value={{
+      instagramUrl, setInstagramUrl,
       followers, setFollowers,
       engagementRate, setEngagementRate,
       productPrice, setProductPrice,
