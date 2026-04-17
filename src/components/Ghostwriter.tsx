@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { PenTool, Loader2, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useAppContext } from "@/context/AppContext";
 
 export function Ghostwriter() {
-  const [productName, setProductName] = useState("");
-  const [painPoints, setPainPoints] = useState("");
+  const { productName, setProductName, painPoints, setPainPoints, followers, revenueGap } = useAppContext();
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState("");
 
@@ -21,10 +21,12 @@ export function Ghostwriter() {
           content: `Act as a High-Ticket Direct Response Copywriter (Iman Gadzhi Style).
           Analyze this Product: ${productName}
           Focus on these Pain Points: ${painPoints}
+          Current Audience Size: ${followers} followers
+          Potential Revenue Leakage: $${revenueGap} monthly
           
           Deliver:
           1. 14-Day Aggressive Launch Plan.
-          2. 3 High-Converting IG Reels Scripts (Hook, Body, CTA).
+          2. 3 High-Converting IG Reels Scripts (Hook, Body, CTA). Mention the revenue leakage to agitate the pain.
           3. 2 Cold DM Scripts for Outreach.
           
           Tone: Authoritative, Minimalist, Elite. Language: English.`

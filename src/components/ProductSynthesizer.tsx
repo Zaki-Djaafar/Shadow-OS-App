@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Package, Loader2, Sparkles } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from "react-markdown";
+import { useAppContext } from "@/context/AppContext";
 
 export function ProductSynthesizer() {
-  const [niche, setNiche] = useState("");
+  const { niche, setNiche, setSynthesizedProduct } = useAppContext();
   const [rawContent, setRawContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState("");
@@ -14,29 +14,16 @@ export function ProductSynthesizer() {
     
     setIsGenerating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `
-        Act as the "Shadow OS" Product Synthesizer.
-        Take the following raw fitness content and structure it into a high-value digital product for the 'Whop' platform.
-        
-        Niche: ${niche}
-        Raw Content/Ideas: ${rawContent}
-        
-        Output Structure:
-        1. Product Title (High Impact)
-        2. Module Breakdown (3-5 Modules)
-        3. Lesson List for each Module
-        4. Bonus Materials (PDFs, Templates)
-        
-        Tone: Professional, High-Value, structured.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
+      const response = await fetch('/api/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, rawContent }),
       });
-
-      setResult(response.text || "Failed to generate content.");
+      const data = await response.json();
+      setResult(data.result || "Failed to generate content.");
+      if (data.result) {
+        setSynthesizedProduct(data.result);
+      }
     } catch (error) {
       console.error("Generation failed", error);
       setResult("Error: Could not connect to Shadow OS AI Core.");

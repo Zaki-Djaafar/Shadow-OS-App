@@ -1,19 +1,12 @@
-import { useState } from "react";
+import { useAppContext } from "@/context/AppContext";
 import { motion } from "motion/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Calculator, ArrowRight } from "lucide-react";
 
 export function ROIAnalyst() {
-  const [followers, setFollowers] = useState(10000);
-  const [engagementRate, setEngagementRate] = useState(3.5);
-  const [productPrice, setProductPrice] = useState(49);
+  const { followers, setFollowers, engagementRate, setEngagementRate, productPrice, setProductPrice, revenueGap } = useAppContext();
 
-  // Formula: Followers * ER * 0.01 * Product Price
-  const revenueGap = Math.round(followers * (engagementRate / 100) * productPrice); // Using /100 for percentage
-  // Wait, the prompt said: Followers * ER * 0.01 * Product Price.
-  // If ER is 3.5, then 3.5 * 0.01 = 0.035.
-  // So 10000 * 3.5 * 0.01 * 49 = 17150.
-  // This matches my calculation above.
+  // revenueGap is now calculated globally in AppContext
 
   const data = [
     { name: "Current", value: 0 },
