@@ -93,8 +93,8 @@ def fetch_ig_profile():
             return jsonify({"success": False, "error": "RAPIDAPI_KEY environment variable is not configured on Vercel."}), 500
             
         # Add the exact endpoint requested
-        url = "https://instagram-scraper-stable-api.p.rapidapi.com/account_info"
-        querystring = {"username": username}
+        url = "https://instagram-scraper-stable-api.p.rapidapi.com/user_info"
+        querystring = {"username_or_url": username}
         headers = {
             "X-RapidAPI-Key": rapidapi_key,
             "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com"
