@@ -1,23 +1,17 @@
+import re
 import requests
 
-headers = {
-	"X-RapidAPI-Key": "404eee3ff2mshfc9693b3f503fa5p149577jsn3e3375718952",
-	"X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com"
-}
-
-endpoints = [
-    "https://instagram-scraper-stable-api.p.rapidapi.com/v1/users/instagram/info",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/v1/users/instagram",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/api/v1/users/instagram",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/usernameinfo/instagram",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/user/instagram",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/profile/instagram",
-    "https://instagram-scraper-stable-api.p.rapidapi.com/"
-]
-
-for url in endpoints:
+def get_free_proxies():
     try:
-        response = requests.get(url, headers=headers)
-        print(url, response.status_code)
-    except:
-        pass
+        r = requests.get('https://www.sslproxies.org/', timeout=5)
+        # Search for typical IP</td><td>PORT structure.
+        # Sometimes there's whitespace or newlines, so we use \s*
+        matches = re.findall(r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<', r.text)
+        return [f"http://{ip}:{port}" for ip, port in matches]
+    except Exception as e:
+        print("Proxy fetch failed:", e)
+        return []
+
+px = get_free_proxies()
+print(f"Found {len(px)} proxies")
+print(px[:5])

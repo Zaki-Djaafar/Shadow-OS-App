@@ -1,5 +1,7 @@
 import os
 import requests
+import re
+import instaloader
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -75,6 +77,15 @@ def manychat():
     result, status = call_gemini(prompt)
     return jsonify({"result": result}), status if status != 200 else 200
 
+def get_free_proxies():
+    try:
+        r = requests.get('https://www.sslproxies.org/', timeout=5)
+        matches = re.findall(r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<', r.text)
+        return [f"http://{ip}:{port}" for ip, port in matches]
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch proxies: {e}")
+        return []
+
 @app.route('/api/fetch-ig-profile', methods=['POST'])
 def fetch_ig_profile():
     url_or_username = request.json.get('url', '').strip()
@@ -87,54 +98,38 @@ def fetch_ig_profile():
         if len(parts) > 1:
             username = parts[1].split("/")[0].split("?")[0]
             
-    try:
-        rapidapi_key = os.environ.get("RAPIDAPI_KEY")
-        if not rapidapi_key:
-            return jsonify({"success": False, "error": "RAPIDAPI_KEY environment variable is not configured on Vercel."}), 500
+    proxies = get_free_proxies()
+    # Fallback to direct connection if proxy list collapses
+    if not proxies:
+        proxies = [None]
+    else:
+        # Enforce severe limit to prevent Serverless Timeout (10s max on Vercel Free)
+        proxies = proxies[:3]
+        
+    for idx, proxy in enumerate(proxies):
+        try:
+            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=3.0)
             
-        # Add the exact endpoint requested
-        url = "https://instagram-scraper-stable-api.p.rapidapi.com/user_info"
-        querystring = {"username_or_url": username}
-        headers = {
-            "X-RapidAPI-Key": rapidapi_key,
-            "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com"
-        }
-        
-        print(f"[DEBUG] Fetching IG Profile URL: {url} with params: {querystring}")
-        response = requests.get(url, headers=headers, params=querystring)
-        print(f"[DEBUG] Status Code: {response.status_code}")
-        
-        if response.status_code == 404:
-            # Fallback path if the primary endpoint structure differs
-            url = "https://instagram-scraper-stable-api.p.rapidapi.com/api/v1/info"
-            print(f"[DEBUG] Falling back to URL: {url}")
-            response = requests.get(url, headers=headers, params=querystring)
-            print(f"[DEBUG] Fallback Status Code: {response.status_code}")
+            if proxy:
+                print(f"[DEBUG] Attempt {idx+1}: Routing via Proxy {proxy}")
+                L.context._session.proxies = {"http": proxy, "https": proxy}
+            else:
+                print(f"[DEBUG] Attempt {idx+1}: Proceeding Direct Connection")
+                
+            profile = instaloader.Profile.from_username(L.context, username)
             
-        if response.status_code != 200:
-             return jsonify({"success": False, "error": f"RapidAPI Endpoint Rejected: {response.text}"}), response.status_code
-             
-        data = response.json()
-        
-        # Robust polymorphic JSON parsing across common IG Graph schemas
-        user_data = data.get('data', {}).get('user', {}) or data.get('user', {}) or data
-        
-        bio = user_data.get('biography', '') or user_data.get('about', '')
-        followers = 0
-        
-        if 'edge_followed_by' in user_data:
-            followers = user_data['edge_followed_by'].get('count', 0)
-        elif 'follower_count' in user_data:
-            followers = user_data['follower_count']
-        elif 'followers' in user_data:
-            followers = user_data['followers']
+            return jsonify({
+                "success": True,
+                "followers": profile.followers,
+                "bio": profile.biography,
+                "proxy_used": proxy or "direct"
+            }), 200
             
-        return jsonify({
-            "success": True,
-            "followers": followers,
-            "bio": bio
-        }), 200
-        
-    except Exception as e:
-        print(f"[ERROR] API Scraper exception: {str(e)}")
-        return jsonify({"success": False, "error": f"API Scraper logic failed: {str(e)}"}), 500
+        except instaloader.exceptions.ProfileNotExistsException:
+            # Fatal error, target doesn't exist, stop rotating immediately.
+            return jsonify({"success": False, "error": "Profile not found."}), 404
+        except Exception as e:
+            print(f"[DEBUG] Proxy {proxy} bounced/failed: {str(e)}")
+            continue
+            
+    return jsonify({"success": False, "error": "All available proxy networks blocked or timed out."}), 500
