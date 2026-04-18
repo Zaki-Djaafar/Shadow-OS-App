@@ -92,19 +92,24 @@ def fetch_ig_profile():
         if not rapidapi_key:
             return jsonify({"success": False, "error": "RAPIDAPI_KEY environment variable is not configured on Vercel."}), 500
             
-        url = "https://instagram-scraper-stable-api.p.rapidapi.com/v1/users/info"
+        # Add the exact endpoint requested
+        url = "https://instagram-scraper-stable-api.p.rapidapi.com/account_info"
         querystring = {"username": username}
         headers = {
             "X-RapidAPI-Key": rapidapi_key,
             "X-RapidAPI-Host": "instagram-scraper-stable-api.p.rapidapi.com"
         }
         
+        print(f"[DEBUG] Fetching IG Profile URL: {url} with params: {querystring}")
         response = requests.get(url, headers=headers, params=querystring)
+        print(f"[DEBUG] Status Code: {response.status_code}")
         
         if response.status_code == 404:
             # Fallback path if the primary endpoint structure differs
             url = "https://instagram-scraper-stable-api.p.rapidapi.com/api/v1/info"
+            print(f"[DEBUG] Falling back to URL: {url}")
             response = requests.get(url, headers=headers, params=querystring)
+            print(f"[DEBUG] Fallback Status Code: {response.status_code}")
             
         if response.status_code != 200:
              return jsonify({"success": False, "error": f"RapidAPI Endpoint Rejected: {response.text}"}), response.status_code
@@ -131,4 +136,5 @@ def fetch_ig_profile():
         }), 200
         
     except Exception as e:
+        print(f"[ERROR] API Scraper exception: {str(e)}")
         return jsonify({"success": False, "error": f"API Scraper logic failed: {str(e)}"}), 500
