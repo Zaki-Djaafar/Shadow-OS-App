@@ -2,11 +2,34 @@ import { useAppContext } from "@/context/AppContext";
 import { motion } from "motion/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Calculator, ArrowRight, Instagram, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function ROIAnalyst() {
   const { followers, setFollowers, engagementRate, setEngagementRate, productPrice, setProductPrice, revenueGap, instagramUrl, setInstagramUrl, setNiche } = useAppContext();
   const [isScraping, setIsScraping] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState("");
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isScraping) {
+      const messages = [
+        "Bypassing Firewalls...", 
+        "Rotating Proxies...", 
+        "Establishing Connection...",
+        "Extracting Bio Data...",
+        "Mapping Context Payload..."
+      ];
+      let i = 0;
+      setLoadingMsg(messages[0]);
+      interval = setInterval(() => {
+        i = (i + 1) % messages.length;
+        setLoadingMsg(messages[i]);
+      }, 1500);
+    } else {
+      setLoadingMsg("");
+    }
+    return () => clearInterval(interval);
+  }, [isScraping]);
 
   const handleScrape = async () => {
     if (!instagramUrl) return;
@@ -70,6 +93,15 @@ export function ROIAnalyst() {
                   {isScraping ? <Loader2 size={18} className="animate-spin" /> : <Instagram size={18} />}
                 </button>
               </div>
+              {isScraping && (
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs text-shadow-accent mt-2 font-mono"
+                >
+                  {loadingMsg}
+                </motion.p>
+              )}
             </div>
           </div>
 

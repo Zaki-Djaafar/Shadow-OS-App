@@ -77,14 +77,30 @@ def manychat():
     result, status = call_gemini(prompt)
     return jsonify({"result": result}), status if status != 200 else 200
 
-def get_free_proxies():
-    try:
-        r = requests.get('https://www.sslproxies.org/', timeout=5)
-        matches = re.findall(r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<', r.text)
-        return [f"http://{ip}:{port}" for ip, port in matches]
-    except Exception as e:
-        print(f"[ERROR] Failed to fetch proxies: {e}")
-        return []
+GLOBAL_PROXY_CACHE = []
+
+def init_proxies():
+    global GLOBAL_PROXY_CACHE
+    sources = [
+        ("https://www.sslproxies.org/", r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<'),
+        ("https://free-proxy-list.net/", r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<'),
+        ("https://spys.me/proxy.txt", r'(\d{1,3}(?:\.\d{1,3}){3}):(\d+)')
+    ]
+    proxies = set()
+    for url, pattern in sources:
+        try:
+            r = requests.get(url, timeout=3)
+            matches = re.findall(pattern, r.text)
+            for ip, port in matches:
+                proxies.add(f"http://{ip}:{port}")
+        except Exception as e:
+            print(f"[ERROR] Failed to fetch proxies from {url}: {e}")
+            
+    GLOBAL_PROXY_CACHE = list(proxies)
+    print(f"[BOOT] Proxy Pre-fetch initialized: {len(GLOBAL_PROXY_CACHE)} active nodes.")
+
+# Vercel Cold-Start Execute
+init_proxies()
 
 @app.route('/api/fetch-ig-profile', methods=['POST'])
 def fetch_ig_profile():
@@ -98,17 +114,24 @@ def fetch_ig_profile():
         if len(parts) > 1:
             username = parts[1].split("/")[0].split("?")[0]
             
-    proxies = get_free_proxies()
+    global GLOBAL_PROXY_CACHE
+    if not GLOBAL_PROXY_CACHE:
+        init_proxies()
+        
+    proxies = GLOBAL_PROXY_CACHE.copy()
+    import random
+    random.shuffle(proxies)
+    
     # Fallback to direct connection if proxy list collapses
     if not proxies:
         proxies = [None]
     else:
-        # Enforce severe limit to prevent Serverless Timeout (10s max on Vercel Free)
-        proxies = proxies[:3]
+        # 1.2s timeout allows roughly 8 attempts in 10s window on Vercel
+        proxies = proxies[:8]
         
     for idx, proxy in enumerate(proxies):
         try:
-            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=3.0)
+            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=1.2)
             
             if proxy:
                 print(f"[DEBUG] Attempt {idx+1}: Routing via Proxy {proxy}")
