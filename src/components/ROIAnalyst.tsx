@@ -59,11 +59,14 @@ export function ROIAnalyst() {
         const targetBio = data.bio || `Instagram Profile: ${instagramUrl}`;
         setNiche(targetBio);
         
+        // Wrap the bio to structurally block the AI from rewriting it
+        const strategic_prompt = `Analyze this profile: ${targetBio}. Create a 3-step monetization plan. Do NOT repeat the bio.`;
+        
         // Phase 2: Automatic Product Synthesis
         const synthRes = await fetch('/api/synthesize', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ niche: targetBio, rawContent: `Create 3 digital product ideas based on this profile.`, followers: data.followers })
+           body: JSON.stringify({ niche: strategic_prompt, rawContent: `Create 3 digital product ideas based on this profile.`, followers: data.followers })
         });
         const synthData = await synthRes.json();
         if (synthData.result) {
