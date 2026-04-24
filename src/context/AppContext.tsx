@@ -22,6 +22,9 @@ interface AppState {
   
   synthesizedProduct: string;
   setSynthesizedProduct: (val: string) => void;
+  
+  ghostwriterResult: string;
+  setGhostwriterResult: (val: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -50,6 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [painPoints, setPainPoints] = useState<string>(() => getInitialState('shadowOs_painPoints', ''));
   const [niche, setNiche] = useState<string>(() => getInitialState('shadowOs_niche', ''));
   const [synthesizedProduct, setSynthesizedProduct] = useState<string>(() => getInitialState('shadowOs_synthesizedProduct', ''));
+  const [ghostwriterResult, setGhostwriterResult] = useState<string>(() => getInitialState('shadowOs_ghostwriterResult', ''));
 
   // Sync state to local storage whenever critical state changes
   useEffect(() => {
@@ -61,7 +65,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('shadowOs_painPoints', JSON.stringify(painPoints));
     localStorage.setItem('shadowOs_niche', JSON.stringify(niche));
     localStorage.setItem('shadowOs_synthesizedProduct', JSON.stringify(synthesizedProduct));
-  }, [instagramUrl, followers, engagementRate, productPrice, productName, painPoints, niche, synthesizedProduct]);
+    localStorage.setItem('shadowOs_ghostwriterResult', JSON.stringify(ghostwriterResult));
+  }, [instagramUrl, followers, engagementRate, productPrice, productName, painPoints, niche, synthesizedProduct, ghostwriterResult]);
 
   const revenueGap = Math.round(followers * (engagementRate / 100) * productPrice);
 
@@ -75,7 +80,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       productName, setProductName,
       painPoints, setPainPoints,
       niche, setNiche,
-      synthesizedProduct, setSynthesizedProduct
+      synthesizedProduct, setSynthesizedProduct,
+      ghostwriterResult, setGhostwriterResult
     }}>
       {children}
     </AppContext.Provider>

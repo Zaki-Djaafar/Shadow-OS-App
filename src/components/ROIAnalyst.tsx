@@ -5,7 +5,18 @@ import { Calculator, ArrowRight, Instagram, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function ROIAnalyst() {
-  const { followers, setFollowers, engagementRate, setEngagementRate, productPrice, setProductPrice, revenueGap, instagramUrl, setInstagramUrl, setNiche } = useAppContext();
+  const { 
+    followers, setFollowers, 
+    engagementRate, setEngagementRate, 
+    productPrice, setProductPrice, 
+    revenueGap, 
+    instagramUrl, setInstagramUrl, 
+    setNiche,
+    setSynthesizedProduct,
+    setProductName,
+    setPainPoints,
+    setGhostwriterResult
+  } = useAppContext();
   const [isScraping, setIsScraping] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
 
@@ -17,6 +28,8 @@ export function ROIAnalyst() {
         "Rotating Proxies...", 
         "Establishing Connection...",
         "Extracting Bio Data...",
+        "Synthesizing Digital Products...",
+        "Drafting Viral Copy...",
         "Mapping Context Payload..."
       ];
       let i = 0;
@@ -43,7 +56,47 @@ export function ROIAnalyst() {
       const data = await response.json();
       if (data.success) {
         setFollowers(data.followers);
-        if (data.bio) setNiche(data.bio);
+        const targetBio = data.bio || `Instagram Profile: ${instagramUrl}`;
+        setNiche(targetBio);
+        
+        // Phase 2: Automatic Product Synthesis
+        const synthRes = await fetch('/api/synthesize', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ niche: targetBio, rawContent: `Create 3 digital product ideas (e.g., E-books, Coaching, Courses) based on this profile bio: ${targetBio}` })
+        });
+        const synthData = await synthRes.json();
+        if (synthData.result) {
+            setSynthesizedProduct(synthData.result);
+            
+            // Define default context for Ghostwriter
+            setProductName("Elite Digital Product / Mentorship");
+            setPainPoints("Converting free followers to high-ticket paid users, lack of automated revenue systems.");
+            
+            // Phase 3: Automatic Ghostwriter Copy Generation
+            const currentGap = Math.round(data.followers * (engagementRate / 100) * productPrice);
+            const ghostRes = await fetch('/api/analyze', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 content: `Act as a High-Ticket Direct Response Copywriter.
+                 Analyze this target niche: ${targetBio}
+                 Focus on taking their engaged audience and monetizing them with digital products.
+                 Current Audience Size: ${data.followers} followers
+                 Potential Revenue Leakage: $${currentGap} monthly
+                 
+                 Deliver:
+                 1. A Viral Hook for an IG Reel
+                 2. A Sales Script for Cold DMs
+                 
+                 Tone: Authoritative, Minimalist, Elite.`
+               })
+            });
+            const ghostData = await ghostRes.json();
+            if (ghostData.result) {
+                setGhostwriterResult(ghostData.result);
+            }
+        }
       } else {
         alert(data.error || "Failed to fetch profile");
       }

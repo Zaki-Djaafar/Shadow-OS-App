@@ -4,10 +4,9 @@ import ReactMarkdown from "react-markdown";
 import { useAppContext } from "@/context/AppContext";
 
 export function ProductSynthesizer() {
-  const { niche, setNiche, setSynthesizedProduct } = useAppContext();
+  const { niche, setNiche, synthesizedProduct, setSynthesizedProduct } = useAppContext();
   const [rawContent, setRawContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState("");
 
   const handleGenerate = async () => {
     if (!niche || !rawContent) return;
@@ -20,13 +19,10 @@ export function ProductSynthesizer() {
         body: JSON.stringify({ niche, rawContent }),
       });
       const data = await response.json();
-      setResult(data.result || "Failed to generate content.");
-      if (data.result) {
-        setSynthesizedProduct(data.result);
-      }
+      setSynthesizedProduct(data.result || "Failed to generate content.");
     } catch (error) {
       console.error("Generation failed", error);
-      setResult("Error: Could not connect to Shadow OS AI Core.");
+      setSynthesizedProduct("Error: Could not connect to Shadow OS AI Core.");
     } finally {
       setIsGenerating(false);
     }
@@ -87,9 +83,9 @@ export function ProductSynthesizer() {
         </div>
 
         <div className="bg-shadow-card border border-shadow-border p-6 rounded-xl overflow-y-auto max-h-[calc(100vh-200px)]">
-          {result ? (
+          {synthesizedProduct ? (
             <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown>{result}</ReactMarkdown>
+              <ReactMarkdown>{synthesizedProduct}</ReactMarkdown>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-shadow-muted opacity-50">

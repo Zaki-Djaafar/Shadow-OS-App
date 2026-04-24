@@ -4,9 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import { useAppContext } from "@/context/AppContext";
 
 export function Ghostwriter() {
-  const { productName, setProductName, painPoints, setPainPoints, followers, revenueGap } = useAppContext();
+  const { productName, setProductName, painPoints, setPainPoints, followers, revenueGap, ghostwriterResult, setGhostwriterResult } = useAppContext();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState("");
 
   const handleGenerate = async () => {
     if (!productName || !painPoints) return;
@@ -34,10 +33,10 @@ export function Ghostwriter() {
       });
 
       const data = await response.json();
-      setResult(data.result || "Failed to generate assets.");
+      setGhostwriterResult(data.result || "Failed to generate assets.");
     } catch (error) {
       console.error("Generation failed", error);
-      setResult("Error: Cloud Engine is still waking up. Please try again in 10 seconds.");
+      setGhostwriterResult("Error: Cloud Engine is still waking up. Please try again in 10 seconds.");
     } finally {
       setIsGenerating(false);
     }
@@ -98,9 +97,9 @@ export function Ghostwriter() {
         </div>
 
         <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl overflow-y-auto max-h-[calc(100vh-250px)]">
-          {result ? (
+          {ghostwriterResult ? (
             <div className="prose prose-invert prose-green max-w-none text-left">
-              <ReactMarkdown>{result}</ReactMarkdown>
+              <ReactMarkdown>{ghostwriterResult}</ReactMarkdown>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50 text-center">

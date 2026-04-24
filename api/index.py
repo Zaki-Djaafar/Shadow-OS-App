@@ -114,6 +114,25 @@ def fetch_ig_profile():
         if len(parts) > 1:
             username = parts[1].split("/")[0].split("?")[0]
             
+    session_id = os.environ.get("INSTAGRAM_SESSION_ID")
+    if session_id:
+        try:
+            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=1.2)
+            L.context._session.cookies.set("sessionid", session_id, domain=".instagram.com")
+            print("[DEBUG] Attempting connection via Session ID.")
+            profile = instaloader.Profile.from_username(L.context, username)
+            
+            return jsonify({
+                "success": True,
+                "followers": profile.followers,
+                "bio": profile.biography,
+                "proxy_used": "session"
+            }), 200
+        except instaloader.exceptions.ProfileNotExistsException:
+            return jsonify({"success": False, "error": "Profile not found."}), 404
+        except Exception as e:
+            print(f"[DEBUG] Session ID failed: {str(e)}. Falling back to proxy rotation...")
+
     global GLOBAL_PROXY_CACHE
     if not GLOBAL_PROXY_CACHE:
         init_proxies()
