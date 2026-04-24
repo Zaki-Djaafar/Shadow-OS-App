@@ -10,7 +10,7 @@ CORS(app)
 
 def call_gemini(prompt):
     api_key = os.environ.get("GEMINI_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
@@ -37,12 +37,16 @@ def analyze():
 def synthesize():
     niche = request.json.get('niche', '')
     raw_content = request.json.get('rawContent', '')
+    followers = request.json.get('followers', 'Unknown')
     
     prompt = f"""
-        Act as the "Shadow OS" Product Synthesizer.
-        Take the following raw fitness content and structure it into a high-value digital product for the 'Whop' platform.
+        Do NOT repeat the input data. You are a High-Level Growth Strategist. 
+        Analyze the following Instagram profile and provide 3 unique, high-ticket digital product ideas.
+        Be specific to the niche.
         
-        Niche: {niche}
+        Profile Stats:
+        Followers: {followers}
+        Niche/Bio Context: {niche}
         Raw Content/Ideas: {raw_content}
         
         Output Structure:

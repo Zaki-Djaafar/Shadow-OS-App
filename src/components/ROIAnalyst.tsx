@@ -63,7 +63,7 @@ export function ROIAnalyst() {
         const synthRes = await fetch('/api/synthesize', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ niche: targetBio, rawContent: `Create 3 digital product ideas (e.g., E-books, Coaching, Courses) based on this profile bio: ${targetBio}` })
+           body: JSON.stringify({ niche: targetBio, rawContent: `Create 3 digital product ideas based on this profile.`, followers: data.followers })
         });
         const synthData = await synthRes.json();
         if (synthData.result) {
@@ -79,9 +79,12 @@ export function ROIAnalyst() {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({
-                 content: `Act as a High-Ticket Direct Response Copywriter.
-                 Analyze this target niche: ${targetBio}
-                 Focus on taking their engaged audience and monetizing them with digital products.
+                 content: `Do NOT repeat the input data. You are a High-Level Growth Strategist. 
+                 Analyze the following Instagram profile (Followers, Niche, Bio) and provide a viral marketing script. 
+                 Be specific to the niche.
+                 
+                 Profile Stats:
+                 Bio/Niche: ${targetBio}
                  Current Audience Size: ${data.followers} followers
                  Potential Revenue Leakage: $${currentGap} monthly
                  
