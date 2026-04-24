@@ -81,30 +81,40 @@ def manychat():
     result, status = call_gemini(prompt)
     return jsonify({"result": result}), status if status != 200 else 200
 
-GLOBAL_PROXY_CACHE = []
 
-def init_proxies():
-    global GLOBAL_PROXY_CACHE
-    sources = [
-        ("https://www.sslproxies.org/", r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<'),
-        ("https://free-proxy-list.net/", r'>(\d{1,3}(?:\.\d{1,3}){3})<.+?>(\d+)<'),
-        ("https://spys.me/proxy.txt", r'(\d{1,3}(?:\.\d{1,3}){3}):(\d+)')
+
+import random
+import time
+
+def get_stealth_instaloader():
+    L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=10.0)
+    
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0"
     ]
-    proxies = set()
-    for url, pattern in sources:
-        try:
-            r = requests.get(url, timeout=3)
-            matches = re.findall(pattern, r.text)
-            for ip, port in matches:
-                proxies.add(f"http://{ip}:{port}")
-        except Exception as e:
-            print(f"[ERROR] Failed to fetch proxies from {url}: {e}")
-            
-    GLOBAL_PROXY_CACHE = list(proxies)
-    print(f"[BOOT] Proxy Pre-fetch initialized: {len(GLOBAL_PROXY_CACHE)} active nodes.")
-
-# Vercel Cold-Start Execute
-init_proxies()
+    
+    L.context._session.headers.update({
+        "User-Agent": random.choice(user_agents),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.instagram.com/",
+        "X-IG-App-ID": "936619743392459",
+        "Sec-Ch-Ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin"
+    })
+    
+    proxy_url = os.environ.get("PROXY_URL")
+    if proxy_url:
+        L.context._session.proxies = {"http": proxy_url, "https": proxy_url}
+        
+    return L
 
 @app.route('/api/fetch-ig-profile', methods=['POST'])
 def fetch_ig_profile():
@@ -119,63 +129,33 @@ def fetch_ig_profile():
             username = parts[1].split("/")[0].split("?")[0]
             
     session_id = os.environ.get("INSTAGRAM_SESSION_ID")
-    if session_id:
-        try:
-            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=1.2)
-            L.context._session.cookies.set("sessionid", session_id, domain=".instagram.com")
-            print("[DEBUG] Attempting connection via Session ID.")
-            profile = instaloader.Profile.from_username(L.context, username)
-            
-            return jsonify({
-                "success": True,
-                "followers": profile.followers,
-                "bio": profile.biography,
-                "proxy_used": "session"
-            }), 200
-        except instaloader.exceptions.ProfileNotExistsException:
-            return jsonify({"success": False, "error": "Profile not found."}), 404
-        except Exception as e:
-            print(f"[DEBUG] Session ID failed: {str(e)}. Falling back to proxy rotation...")
-
-    global GLOBAL_PROXY_CACHE
-    if not GLOBAL_PROXY_CACHE:
-        init_proxies()
-        
-    proxies = GLOBAL_PROXY_CACHE.copy()
-    import random
-    random.shuffle(proxies)
     
-    # Fallback to direct connection if proxy list collapses
-    if not proxies:
-        proxies = [None]
-    else:
-        # 1.2s timeout allows roughly 8 attempts in 10s window on Vercel
-        proxies = proxies[:8]
-        
-    for idx, proxy in enumerate(proxies):
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
-            L = instaloader.Instaloader(quiet=True, dirname_pattern="", filename_pattern="", request_timeout=1.2)
+            L = get_stealth_instaloader()
+            if session_id:
+                L.context._session.cookies.set("sessionid", session_id, domain=".instagram.com")
             
-            if proxy:
-                print(f"[DEBUG] Attempt {idx+1}: Routing via Proxy {proxy}")
-                L.context._session.proxies = {"http": proxy, "https": proxy}
-            else:
-                print(f"[DEBUG] Attempt {idx+1}: Proceeding Direct Connection")
-                
             profile = instaloader.Profile.from_username(L.context, username)
             
             return jsonify({
                 "success": True,
                 "followers": profile.followers,
                 "bio": profile.biography,
-                "proxy_used": proxy or "direct"
+                "proxy_used": "PROXY_URL" if os.environ.get("PROXY_URL") else "direct"
             }), 200
             
         except instaloader.exceptions.ProfileNotExistsException:
-            # Fatal error, target doesn't exist, stop rotating immediately.
             return jsonify({"success": False, "error": "Profile not found."}), 404
         except Exception as e:
-            print(f"[DEBUG] Proxy {proxy} bounced/failed: {str(e)}")
-            continue
+            error_str = str(e).lower()
+            if "403" in error_str or "429" in error_str or "json" in error_str:
+                if attempt < max_retries - 1:
+                    sleep_time = random.uniform(5, 10)
+                    print(f"[WARNING] Rate limit/Block hit (403/429). Retrying in {sleep_time:.2f}s...")
+                    time.sleep(sleep_time)
+                    continue
+            return jsonify({"success": False, "error": f"Scrape Failed: {str(e)}"}), 500
             
-    return jsonify({"success": False, "error": "All available proxy networks blocked or timed out."}), 500
+    return jsonify({"success": False, "error": "Max retries exceeded. IP blocked."}), 500
